@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Code Reviewer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --accent-color: #3b82f6;
+            --text-color: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --success-color: #10b981;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+        header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+        header p { color: var(--text-secondary); }
+
+        /* Upload Card */
+        .upload-card {
+            background-color: var(--card-bg);
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            text-align: center;
+            border: 1px solid #334155;
+            transition: transform 0.2s;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            margin-bottom: 1.5rem;
+        }
+
+        input[type="file"] {
+            display: none; /* Hide ugly default button */
+        }
+
+        .custom-file-btn {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            background-color: #334155;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-weight: 500;
+        }
+
+        .custom-file-btn:hover { background-color: #475569; }
+        
+        #fileName {
+            display: block;
+            margin-top: 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .analyze-btn {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+        }
+
+        .analyze-btn:hover {
+            background-color: #2563eb;
+            transform: translateY(-2px);
+        }
+
+        .analyze-btn:disabled {
+            background-color: #64748b;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Report Section */
+        #reportSection {
+            display: none; /* Hidden by default */
+            background-color: var(--card-bg);
+            padding: 2rem;
+            border-radius: 16px;
+            border: 1px solid #334155;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Markdown Styling within Report */
+        .report-content h3 { color: #60a5fa; margin-top: 1.5rem; margin-bottom: 0.5rem; }
+        .report-content p { line-height: 1.6; margin-bottom: 1rem; color: #cbd5e1; }
+        .report-content ul { margin-left: 1.5rem; margin-bottom: 1rem; }
+        .report-content li { margin-bottom: 0.5rem; }
+        .report-content strong { color: #fff; }
+        .report-content code {
+            background-color: #0f172a;
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: monospace;
+            color: #fbbf24;
+        }
+
+        /* Loader */
+        .loader {
+            display: none;
+            margin: 1rem auto;
+            border: 4px solid #334155;
+            border-top: 4px solid var(--accent-color);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Code Review Assistant</h1>
+            <p>AI-Powered Code Analysis & Improvement Suggestions</p>
+        </header>
+
+        <div class="upload-card">
+            <div class="file-input-wrapper">
+                <label for="fileInput" class="custom-file-btn">
+                    📂 Select Source Code File
+                </label>
+                <input type="file" id="fileInput" onchange="updateFileName()">
+                <span id="fileName">No file chosen</span>
+            </div>
+            
+            <button onclick="uploadFile()" id="analyzeBtn" class="analyze-btn">🚀 Analyze Code</button>
+            <div id="loader" class="loader"></div>
+        </div>
+
+        <div id="reportSection">
+            <h2 style="border-bottom: 1px solid #475569; padding-bottom: 0.5rem; margin-bottom: 1rem;">Review Report</h2>
+            <div id="reportContent" class="report-content">
+                </div>
+        </div>
+    </div>
+
+    <script>
+        // Show selected filename
+        function updateFileName() {
+            const fileInput = document.getElementById('fileInput');
+            const fileNameSpan = document.getElementById('fileName');
+            if (fileInput.files.length > 0) {
+                fileNameSpan.textContent = fileInput.files[0].name;
+                fileNameSpan.style.color = "#10b981"; // Green color
+            } else {
+                fileNameSpan.textContent = "No file chosen";
+            }
+        }
+
+        async function uploadFile() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            const loader = document.getElementById('loader');
+            const reportSection = document.getElementById('reportSection');
+            const reportContent = document.getElementById('reportContent');
+            const btn = document.getElementById('analyzeBtn');
+
+            if (!file) {
+                alert("Please select a file first!");
+                return;
+            }
+
+            // UI State: Loading
+            btn.disabled = true;
+            btn.style.opacity = "0.7";
+            loader.style.display = "block";
+            reportSection.style.display = "none";
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('http://127.0.0.1:8000/review', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Server Error: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                
+                // Render Markdown to HTML using 'marked' library
+                reportContent.innerHTML = marked.parse(data.review);
+                reportSection.style.display = "block";
+
+            } catch (error) {
+                alert("Error: " + error.message);
+            } finally {
+                // Reset UI
+                loader.style.display = "none";
+                btn.disabled = false;
+                btn.style.opacity = "1";
+            }
+        }
+    </script>
+</body>
+</html>
